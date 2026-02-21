@@ -2,19 +2,11 @@
 
 ## Overview
 
-This is a fullstack template with FastAPI backend, React frontend, and PostgreSQL database. It is designed to run in Docker-in-Docker environments where volumes do not work.
+Fullstack application with FastAPI backend, React frontend, and PostgreSQL database.
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│  port-finder (external service - must be running)       │
-│  - Manages dynamic port allocation                      │
-│  - Persists state in named volume                       │
-│  - Endpoints: /allocate, /release, /status              │
-└─────────────────────────────────────────────────────────┘
-                            │
-                            ▼
 ┌─────────────┐   ┌─────────────┐   ┌─────────────┐
 │     db     │──▶│   backend   │──▶│  frontend   │
 │  (postgres)│   │  (fastapi)  │   │   (react)   │
@@ -23,97 +15,47 @@ This is a fullstack template with FastAPI backend, React frontend, and PostgreSQ
 
 ## Getting Started
 
-### Prerequisites
+```bash
+# Setup environment
+cp .env.example .env
+# Edit .env - set PROJECT_NAME
 
-1. Start the port-finder service (one-time):
-   ```bash
-   cd ../port-finder
-   docker compose up -d
-   ```
-
-2. Copy template to new project:
-   ```bash
-   cp -r fullstack-template my-new-app
-   cd my-new-app
-   ```
-
-3. Setup environment:
-   ```bash
-   cp .env.example .env
-   # Edit .env - set PROJECT_NAME
-   ```
-
-4. Start the application:
-   ```bash
-   docker compose up --build
-   ```
-
-### Port Allocation
-
-Ports are dynamically allocated starting at 40000. The port-finder service manages port assignments:
-- Each service requests a port on startup
-- Ports are released when services stop
-- Check allocated ports: `curl http://localhost:8080/status`
-
-### Important: No Data Persistence
-
-Since this runs in Docker-in-Docker without volumes:
-- Database data is LOST when containers stop/restart
-- This is intentional for development/testing
-- Do not use for production data
+# Start the application
+docker compose up --build
+```
 
 ## Project Structure
 
 ```
-fullstack-template/
+.
 ├── AGENTS.md              # This file
-├── docker-compose.yml     # Orchestrates all services
+├── docker-compose.yml     # Service orchestration
 ├── .env.example          # Environment template
 ├── backend/
-│   ├── AGENTS.md         # Backend-specific patterns
-│   ├── Dockerfile
+│   ├── AGENTS.md         # Backend patterns & commands
 │   ├── requirements.txt
 │   ├── alembic.ini
-│   ├── app/              # Application code
+│   ├── app/
 │   │   ├── main.py       # FastAPI entrypoint
 │   │   ├── database.py   # SQLAlchemy setup
-│   │   ├── models/       # SQLAlchemy models
+│   │   ├── models/       # ORM models
 │   │   ├── schemas/      # Pydantic schemas
-│   │   └── api/          # API routes
-│   └── alembic/          # Database migrations
+│   │   └── api/          # Route handlers
+│   └── alembic/          # Migrations
 └── frontend/
-    ├── AGENTS.md         # Frontend-specific patterns
-    ├── Dockerfile
+    ├── AGENTS.md         # Frontend patterns & commands
+    ├── package.json
     ├── playwright.config.ts
-    ├── tests/            # Playwright tests
+    ├── tests/            # E2E tests
     └── src/
-        ├── features/     # Page-based feature modules
+        ├── features/     # Page-based modules
         │   └── <page>/
-        │       ├── README.md    # REQUIRED: Product spec
-        │       ├── components/
-        │       └── index.ts
+        │       ├── README.md    # Product spec (REQUIRED)
+        │       └── ...
         └── ...
 ```
 
-## Multi-Instance Running
-
-When running multiple instances of this template:
-
-1. Each instance needs a unique `PROJECT_NAME` in `.env`
-2. The port-finder service maintains port state across all instances
-3. Each instance gets its own set of ports (db, backend, frontend)
-4. Services clean up their ports on shutdown via the release endpoint
-
-Example:
-```bash
-# Instance 1
-cd app1 && docker compose up  # Gets ports 40000, 40001, 40002
-
-# Instance 2 (runs concurrently)
-cd app2 && docker compose up  # Gets ports 40003, 40004, 40005
-```
-
-## Commands Reference
+## Commands
 
 ### All Services
 ```bash
@@ -125,7 +67,6 @@ docker compose ps             # Check status
 
 ### Backend
 ```bash
-# Inside container
 black .                       # Format
 isort .                       # Import sort
 ruff check .                  # Lint
@@ -137,13 +78,12 @@ pytest -v --cov=app           # With coverage
 
 ### Frontend
 ```bash
-# Inside container
 npm run format               # Format (prettier)
 npm run lint                 # Lint
-npm run lint:fix             # Lint & fix
-npm run typecheck            # Type check (tsc)
-npx playwright test          # Run tests
-npx playwright test --ui     # UI mode
+npm run lint:fix            # Lint & fix
+npm run typecheck           # Type check (tsc)
+npx playwright test         # Run tests
+npx playwright test --ui    # UI mode
 ```
 
 ## Testing Guidelines
@@ -161,23 +101,31 @@ npx playwright test --ui     # UI mode
 - Update tests when requirements change
 - Focus on user experience, not implementation details
 
-## Troubleshooting
+## Feature Development
 
-### Port Conflicts
-If services fail to start due to port conflicts:
-```bash
-# Check what's using ports
-curl http://localhost:8080/status
+### Frontend
 
-# Manually release if needed
-curl http://localhost:8080/release/<service-name>
+Each feature lives in `src/features/<page-name>/`:
+
+```
+src/features/<page-name>/
+├── README.md           # Product spec (REQUIRED)
+├── index.ts            # Exports
+├── <PageName>Page.tsx  # Main page component
+└── components/         # Feature-specific components
 ```
 
-### Container Won't Start
-```bash
-# Check logs
-docker compose logs <service-name>
+See `frontend/AGENTS.md` for detailed feature README template.
 
-# Rebuilddocker compose build --
-no-cache <service-name>
+## Database Migrations
+
+```bash
+# Create migration
+alembic revision --autogenerate -m "description"
+
+# Run migrations
+alembic upgrade head
+
+# Rollback
+alembic downgrade -1
 ```

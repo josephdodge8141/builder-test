@@ -2,21 +2,14 @@ version: '3.8'
 
 services:
   db:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.db
+    image: postgres:15-alpine
     container_name: ${PROJECT_NAME:-app}_db
     environment:
-      - SERVICE_TYPE=db
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=${PROJECT_NAME:-app}
-    env_file:
-      - .env
-    entrypoint: /app/wait-and-release.sh
-    depends_on:
-      port-finder:
-        condition: service_healthy
+    ports:
+      - "${DB_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -27,7 +20,6 @@ services:
     build: ./backend
     container_name: ${PROJECT_NAME:-app}_backend
     environment:
-      - SERVICE_TYPE=backend
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/${PROJECT_NAME:-app}
       - DATABASE_URL_SYNC=postgresql://postgres:postgres@db:5432/${PROJECT_NAME:-app}
       - POSTGRES_HOST=db
@@ -35,9 +27,8 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=${PROJECT_NAME:-app}
-    env_file:
-      - .env
-    entrypoint: /app/wait-and-release.sh
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -46,15 +37,8 @@ services:
     build: ./frontend
     container_name: ${PROJECT_NAME:-app}_frontend
     environment:
-      - SERVICE_TYPE=frontend
-      - VITE_API_URL=http://localhost
-    env_file:
-      - .env
-    entrypoint: /app/wait-and-release.sh
+      - VITE_API_URL=http://backend:8000
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
     depends_on:
-      backend:
-        condition: service_healthy
-
-  port-finder:
-    external: true
-    name: port-finder
+      - backend
