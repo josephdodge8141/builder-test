@@ -1,0 +1,9 @@
+# API routes package
+from fastapi import APIRouter
+
+from app.api.routes import users
+
+router = APIRouter()
+router.include_router(users.router)
+
+__all__ = ["router"]

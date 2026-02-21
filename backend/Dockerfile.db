@@ -1,0 +1,7 @@
+FROM postgres:15-alpine
+
+RUN mkdir -p /app
+
+EXPOSE 5432
+
+CMD ["postgres"]
