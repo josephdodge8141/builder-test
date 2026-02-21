@@ -15,6 +15,8 @@ Fullstack application with FastAPI backend, React frontend, and PostgreSQL datab
 
 ## Getting Started
 
+The [port-finder](https://github.com/anomalyco/port-finder) service must be running for startup to work.
+
 ```bash
 # Setup environment
 cp .env.example .env
